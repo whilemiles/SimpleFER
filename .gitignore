@@ -1,2 +1,5 @@
 ﻿test
 temp
+.cache
+.vscode
+build
