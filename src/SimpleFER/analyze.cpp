@@ -1,5 +1,3 @@
-#include "analyze.h"
-#include "functions.cpp"
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
@@ -9,6 +7,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
 #include <string>
+#include "analyze.h"
+#include "functions.hpp"
 
 static int cnt = 0;
 
@@ -16,8 +16,8 @@ std::vector<Face> analyzeFace(cv::Mat img)
 {
     std::vector<Face> analyzedFaces;
     std::vector<cv::Rect> faceRegions;
-    bool bMultipleFaces = false;
-     
+    bool bDetectMultipleFaces = false;
+
     //detect
     cv::CascadeClassifier faceCascade;
     faceCascade.load("/usr/share/opencv4/haarcascades/haarcascade_frontalface_default.xml");
@@ -48,27 +48,28 @@ std::vector<Face> analyzeFace(cv::Mat img)
         angry,
         happy,
         sad,
-        surprised,
-        disgusted,
-        scared};
+        surprise,
+        disgust,
+        fear
+    };
     //result
-    if(bMultipleFaces){
-        for(auto region : faceRegions){
+    if (bDetectMultipleFaces) {
+        for (auto region : faceRegions) {
             Face face;
             face.region = region;
-            //TODO
+            // TODO
+            face.emotion = emo[rand() % 7];
+            analyzedFaces.push_back(face);
+        }
+    } else {
+        if (faceRegions.size() > 0) {
+            Face face;
+            face.region = faceRegions[0];
             face.emotion = emo[rand() % 7];
             analyzedFaces.push_back(face);
         }
     }
-    else{
-        Face face;
-        face.region = faceRegions[0];
-        face.emotion = emo[rand() % 7];
-        analyzedFaces.push_back(face);
-    }
-    
-    
+
     return analyzedFaces;
 }
 

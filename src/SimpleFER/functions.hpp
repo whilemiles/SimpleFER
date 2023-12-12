@@ -3,6 +3,9 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
 
+double getEuclideanDistance(int x1 ,int y1 , int x2 , int y2 );
+int rotateImage(const cv::Mat &src, cv::Mat &dst, const double angle, const int mode);
+
 double getEuclideanDistance(int x1 ,int y1 , int x2 , int y2 )
 {
 	return  pow(pow(x1 - x2, 2) + pow(y1 - y2, 2), 0.5);
