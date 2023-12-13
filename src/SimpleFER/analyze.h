@@ -10,6 +10,14 @@ enum Emotion
     sad,
     surprise,
     neutral
+} Emo[7] = {
+    angry,
+    disgust,
+    fear,
+    happy,
+    sad,
+    surprise,
+    neutral
 };
 
 std::string Enum2String(Emotion e)

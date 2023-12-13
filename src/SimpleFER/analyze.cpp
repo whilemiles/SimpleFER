@@ -1,4 +1,6 @@
+#include <ATen/core/grad_mode.h>
 #include <algorithm>
+#include <c10/core/DeviceType.h>
 #include <cstdlib>
 #include <cmath>
 #include <opencv2/core/mat.hpp>
@@ -7,6 +9,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
 #include <string>
+#include "torch/script.h"
+#include "torch/torch.h"
 #include "analyze.h"
 #include "functions.hpp"
 
@@ -27,49 +31,40 @@ std::vector<Face> analyzeFace(cv::Mat img)
     faceCascade.detectMultiScale(imgGray, faceRegions,
      1.1, 3, 0, cv::Size(80, 80));
 
-    //align test: 测试结果显示，第一步检测无法显示倾斜的人脸，后续的对齐旋转似乎也不正确。
-
-    // if(faceRegions.size() > 0){
-    //     cv::Mat dectectedImage = imgGray(faceRegions[0]);
-    //     std::string name = "./" + std::to_string(cnt) + "a.jpg";
-    //     std::string name2 = "./" + std::to_string(cnt) + "b.jpg";
-    //     if(cnt == 10){
-    //         cnt = 0;
-    //     }
-    //     cv::imwrite(name, dectectedImage);
-    //     cv::Mat alianedImage = alignImage(dectectedImage);
-    //     cv::imwrite(name2, alianedImage);
-    //     cnt++;
-    //     cv::namedWindow("T");
-    //     cv::imshow("T", alianedImage);
-    // }
-    Emotion emo[7] ={
-        neutral,
-        angry,
-        happy,
-        sad,
-        surprise,
-        disgust,
-        fear
-    };
-    //result
-    if (bDetectMultipleFaces) {
-        for (auto region : faceRegions) {
-            Face face;
-            face.region = region;
-            // TODO
-            face.emotion = emo[rand() % 7];
-            analyzedFaces.push_back(face);
-        }
-    } else {
+    if(faceRegions.size() > 0)
+    {
         if (faceRegions.size() > 0) {
-            Face face;
-            face.region = faceRegions[0];
-            face.emotion = emo[rand() % 7];
-            analyzedFaces.push_back(face);
+            for (auto region : faceRegions) {
+                cv::Mat img_face = imgGray(region);
+                
+                cv::Mat img_face_f, img_face_r;
+
+                img_face.convertTo(img_face_f, CV_32F, 1.0 / 255);
+                cv::resize(img_face_f, img_face_r, {48,48});
+                at::Tensor img_tensor = torch::from_blob(img_face_r.data, {1, 1, 48, 48}, torch::kFloat32);
+                
+                auto input = img_tensor.to(torch::kCUDA);
+            
+                torch::jit::Module model = torch::jit::load("../saved/EmoCNN.jit");
+                model.to(torch::kCUDA);
+                
+                torch::NoGradGuard no_grad;
+                auto tmp = model.forward({input});
+                torch::Tensor output = model.forward({input}).toTensor();
+                std::cout << output << std::endl;
+                int res = torch::argmax(output, 1).item().toInt();
+                
+                Face face;
+                face.region = region;
+                face.emotion = Emo[res];
+
+                analyzedFaces.push_back(face);
+
+                if(!bDetectMultipleFaces) break;
+            }
         }
     }
-
+    
     return analyzedFaces;
 }
 

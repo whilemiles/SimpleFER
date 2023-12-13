@@ -1,4 +1,5 @@
 """train.py"""
+import os
 import torch
 import torch.utils.data as data
 import torch.nn as nn
@@ -7,7 +8,6 @@ import torchvision.transforms as transforms
 import numpy as np
 from torch import optim
 import Emo_CNN
-import os
 
 PATH_TRAIN = './dataset/train/'
 PATH_TEST = './dataset/validate/'
@@ -35,7 +35,6 @@ def train(train_dataset, val_dataset, batch_size, epochs,
             loss = compute_loss(outputs, labels)
             loss.backward()
             optimizer.step()
-        
         if print_cost:
             print(f"epoch{epoch + 1}: train loss:{loss.item()}")
         if epoch % 10 == 9:
@@ -83,7 +82,7 @@ def main():
     model = train(data_train, data_vaild, batch_size=BATCH_SIZE, epochs=EPOCHS,
                   learning_rate=LEARNING_RATE, wt_decay=0, print_cost=True)
     os.makedirs('./saved', exist_ok=True)
-    torch.save(model, './saved/EmoCNN.pkl')  # 保存模型
+    torch.save(model, './saved/EmoCNN.pt')  # 保存模型
 
 if __name__ == '__main__':
     main()
