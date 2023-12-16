@@ -38,12 +38,12 @@ int main(int argc, char* argv[])
         }
         for (Face& face : faces)
         {
-            cv::rectangle(img, face.region, cv::Scalar(255, 0, 0), 2);
+            cv::rectangle(img, face.region, cv::Scalar(0, 255, 0), 2);
             
             std::string emotion_text = face.getEmotion();
             cv::Point point{face.region.x, face.region.y - 50};
             cv::putText(img, emotion_text, point, cv::FONT_HERSHEY_PLAIN,
-             3, cv::Scalar(255, 0, 0), 2);
+             3, cv::Scalar(0, 255, 0), 2);
         }
         
         cv::imshow("SimpleFER", img);
