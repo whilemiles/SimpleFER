@@ -14,7 +14,7 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 #include "analyze.h"
-#include "functions.hpp"
+#include "functions.h"
 
 static int cnt = 0;
 
@@ -29,9 +29,6 @@ std::vector<Face> analyzeFace(cv::Mat img)
     cv::Mat imgGray;
     cv::cvtColor(img, imgGray, cv::COLOR_BGR2GRAY);
     
-    // cv::CascadeClassifier faceCascade;
-    // faceCascade.load("/usr/share/opencv4/haarcascades/haarcascade_frontalface_default.xml");
-    //faceCascade.detectMultiScale(imgGray, faceRegions, 1.1, 3, 0, cv::Size(80, 80));
     cv::Mat detectedFaces;
     cv::Ptr<cv::FaceDetectorYN> detector = cv::FaceDetectorYN::create("../saved/yunet.onnx", "", imgGray.size());
     detector->detect(img, detectedFaces);
@@ -69,45 +66,13 @@ std::vector<Face> analyzeFace(cv::Mat img)
             
             Face face;
             face.region = region;
-            face.emotion = Emo[res];
+            face.emotion = (Face::Emotion)res;
 
             analyzedFaces.push_back(face);
 
             if(!bDetectMultipleFaces) break;
         }
     }
-
-    // if(faceRegions.size() > 0)
-    // {
-    //     for (auto region : faceRegions) {
-    //         cv::Mat img_face = imgGray(region);
-            
-    //         cv::Mat img_face_f, img_face_r;
-
-    //         img_face.convertTo(img_face_f, CV_32F, 1.0 / 255);
-    //         cv::resize(img_face_f, img_face_r, {48,48});
-    //         at::Tensor img_tensor = torch::from_blob(img_face_r.data, {1, 1, 48, 48}, torch::kFloat32);
-            
-    //         auto input = img_tensor.to(torch::kCUDA);
-        
-    //         torch::jit::Module model = torch::jit::load("../saved/EmoCNN.jit");
-    //         model.to(torch::kCUDA);
-            
-    //         torch::NoGradGuard no_grad;
-    //         auto tmp = model.forward({input});
-    //         torch::Tensor output = model.forward({input}).toTensor();
-    //         std::cout << output << std::endl;
-    //         int res = torch::argmax(output, 1).item().toInt();
-            
-    //         Face face;
-    //         face.region = region;
-    //         face.emotion = Emo[res];
-
-    //         analyzedFaces.push_back(face);
-
-    //         if(!bDetectMultipleFaces) break;
-    //     }
-    // }
     
     return analyzedFaces;
 }
@@ -172,3 +137,4 @@ cv::Mat alignImage(cv::Mat faceImage)
     }
     return alignedImage;
 }
+

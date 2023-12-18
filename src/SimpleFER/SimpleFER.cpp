@@ -3,7 +3,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
-#include "analyze.cpp"
+#include "analyze.h"
 
 int main(int argc, char* argv[])
 {
@@ -40,10 +40,9 @@ int main(int argc, char* argv[])
         {
             cv::rectangle(img, face.region, cv::Scalar(0, 255, 0), 2);
             
-            std::string emotion_text = face.getEmotion();
-            cv::Point point{face.region.x, face.region.y - 50};
-            cv::putText(img, emotion_text, point, cv::FONT_HERSHEY_PLAIN,
-             3, cv::Scalar(0, 255, 0), 2);
+            std::string emotion_text = face.getEmotionText();
+            cv::Point text_location{face.region.x, face.region.y - 50};
+            cv::putText(img, emotion_text, text_location, cv::FONT_HERSHEY_PLAIN, 3, cv::Scalar(0, 255, 0), 2);
         }
         
         cv::imshow("SimpleFER", img);
