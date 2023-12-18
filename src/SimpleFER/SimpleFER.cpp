@@ -3,7 +3,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
-#include "analyze.h"
+#include "FERPipeline.h"
 
 int main(int argc, char* argv[])
 {
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
         if(frameCount % interval == 0){
             frameCount = 0;
             faces.clear();
-            faces = analyzeFace(img);
+            faces = FERPipeline(img);
         }
         for (Face& face : faces)
         {

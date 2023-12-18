@@ -14,7 +14,7 @@ link_directories(${OpenCV_LIBRARIES})
 find_package(Torch REQUIRED)
 
 # other settings
-add_executable(SimpleFER src/SimpleFER/SimpleFER.cpp src/SimpleFER/analyze.cpp src/SimpleFER/Face.cpp src/SimpleFER/functions.cpp)
+add_executable(SimpleFER src/SimpleFER/SimpleFER.cpp src/SimpleFER/FERPipeline.cpp src/SimpleFER/Face.cpp src/SimpleFER/functions.cpp)
 
 target_link_libraries(SimpleFER PRIVATE ${TORCH_LIBRARIES} ${OpenCV_LIBRARIES})
 

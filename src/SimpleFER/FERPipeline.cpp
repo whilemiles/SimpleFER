@@ -13,71 +13,61 @@
 #include <string>
 #include "torch/script.h"
 #include "torch/torch.h"
-#include "analyze.h"
+#include "FERPipeline.h"
 #include "functions.h"
 
 static int cnt = 0;
 
-std::vector<Face> analyzeFace(cv::Mat img)
+std::vector<Face> FERPipeline(cv::Mat img)
 {
-    bool bDetectMultipleFaces = false;
-
-    std::vector<Face> analyzedFaces;
-    std::vector<cv::Rect> faceRegions;
 
     //detect
+    auto detectedFaces = detectFace(img);
+    //align
+    //auto alignedFace = alignFace(detectedFace);
+    //normalize
     cv::Mat imgGray;
     cv::cvtColor(img, imgGray, cv::COLOR_BGR2GRAY);
-    
-    cv::Mat detectedFaces;
-    cv::Ptr<cv::FaceDetectorYN> detector = cv::FaceDetectorYN::create("../saved/yunet.onnx", "", imgGray.size());
-    detector->detect(img, detectedFaces);
-    
-    if(detectedFaces.rows > 0)
-    {
-        for (int i = 0; i < detectedFaces.rows; i++) {
-            float x, y, w, h;
-            x = std::max<float>(0, detectedFaces.at<float>(i,0));
-            y = std::max<float>(0, detectedFaces.at<float>(i,1));
-            w = std::max<float>(0, detectedFaces.at<float>(i,2));
-            h = std::max<float>(0, detectedFaces.at<float>(i,3));
-            
-            if(x + w >= imgGray.cols) w = imgGray.cols - x;
-            if(y + h >= imgGray.rows) h = imgGray.rows - y;
-            
-            cv::Rect region(x, y, w, h);
-            cv::Mat img_face = imgGray(region);
-            
-            cv::Mat img_face_f, img_face_r;
-
-            img_face.convertTo(img_face_f, CV_32F, 1.0 / 255);
-            cv::resize(img_face_f, img_face_r, {48,48});
-            at::Tensor img_tensor = torch::from_blob(img_face_r.data, {1, 1, 48, 48}, torch::kFloat32);
-            
-            auto input = img_tensor.to(torch::kCUDA);
-        
-            torch::jit::Module model = torch::jit::load("../saved/EmoCNN.jit");
-            model.to(torch::kCUDA);
-            
-            torch::NoGradGuard no_grad;
-            auto tmp = model.forward({input});
-            torch::Tensor output = model.forward({input}).toTensor();
-            int res = torch::argmax(output, 1).item().toInt();
-            
-            Face face;
-            face.region = region;
-            face.emotion = (Face::Emotion)res;
-
-            analyzedFaces.push_back(face);
-
-            if(!bDetectMultipleFaces) break;
-        }
-    }
-    
+    //analyze
+    auto analyzedFaces = analyzeFace(imgGray, detectedFaces);
     return analyzedFaces;
 }
 
-cv::Mat alignImage(cv::Mat faceImage)
+
+std::vector<Face> detectFace(cv::Mat img)
+{
+    bool bDetectMultipleFaces = false;
+
+    std::vector<Face> detectedFaces;
+
+    cv::Mat YuNetOutput;
+    cv::Ptr<cv::FaceDetectorYN> detector = cv::FaceDetectorYN::create("../saved/yunet.onnx", "", img.size());
+    detector->detect(img, YuNetOutput);
+
+    if (YuNetOutput.rows > 0) {
+        for (int i = 0; i < YuNetOutput.rows; i++) {
+            float x, y, w, h;
+            x = std::max<float>(0, YuNetOutput.at<float>(i, 0));
+            y = std::max<float>(0, YuNetOutput.at<float>(i, 1));
+            w = std::max<float>(0, YuNetOutput.at<float>(i, 2));
+            h = std::max<float>(0, YuNetOutput.at<float>(i, 3));
+
+            if (x + w >= img.cols)
+            w = img.cols - x;
+            if (y + h >= img.rows)
+            h = img.rows - y;
+
+            cv::Rect region(x, y, w, h);
+            Face face;
+            face.region = region;
+            detectedFaces.push_back(face);
+            if (!bDetectMultipleFaces) break;
+        }
+    }
+    return detectedFaces;
+}
+
+cv::Mat alignFace(cv::Mat faceImage)
 {
     cv::Mat alignedImage = faceImage;
     cv::CascadeClassifier eyeCascade;
@@ -136,5 +126,36 @@ cv::Mat alignImage(cv::Mat faceImage)
         rotateImage(faceImage, alignedImage, angle, 1);
     }
     return alignedImage;
+}
+
+// cv::Mat normalizeFace(cv::Mat imgGray){
+// }
+std::vector<Face> analyzeFace(cv::Mat img, std::vector<Face> faces)
+{
+    std::vector<Face> analyzedFaces;
+    for(auto face : faces){
+        cv::Mat img_face = img(face.region);
+        
+        cv::Mat img_face_f, img_face_r;
+
+        img_face.convertTo(img_face_f, CV_32F, 1.0 / 255);
+        cv::resize(img_face_f, img_face_r, {48,48});
+        at::Tensor img_tensor = torch::from_blob(img_face_r.data, {1, 1, 48, 48}, torch::kFloat32);
+        
+        auto input = img_tensor.to(torch::kCUDA);
+    
+        torch::jit::Module model = torch::jit::load("../saved/EmoCNN.jit");
+        model.to(torch::kCUDA);
+        
+        torch::NoGradGuard no_grad;
+        auto tmp = model.forward({input});
+        torch::Tensor output = model.forward({input}).toTensor();
+        int res = torch::argmax(output, 1).item().toInt();
+        
+        face.emotion = (Face::Emotion)res;
+
+        analyzedFaces.push_back(face);
+    }
+    return analyzedFaces;
 }
 
