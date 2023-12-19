@@ -23,13 +23,16 @@ std::vector<Face> FERPipeline(cv::Mat img)
 
     //detect
     auto detectedFaces = detectFace(img);
+
     //align
-    //auto alignedFace = alignFace(detectedFace);
-    //normalize
-    cv::Mat imgGray;
-    cv::cvtColor(img, imgGray, cv::COLOR_BGR2GRAY);
+    auto alignedFaces = alignFace(img, detectedFaces);
+
+    // TODO::normalize
+    
+    
     //analyze
-    auto analyzedFaces = analyzeFace(imgGray, detectedFaces);
+    auto analyzedFaces = analyzeFace(img, alignedFaces);
+    
     return analyzedFaces;
 }
 
@@ -58,8 +61,14 @@ std::vector<Face> detectFace(cv::Mat img)
             h = img.rows - y;
 
             cv::Rect region(x, y, w, h);
+            
+            cv::Point right_eye(std::max<float>(0, YuNetOutput.at<float>(i, 4)), std::max<float>(0, YuNetOutput.at<float>(i, 5)));
+            cv::Point left_eye(std::max<float>(0, YuNetOutput.at<float>(i, 6)), std::max<float>(0, YuNetOutput.at<float>(i, 7)));
+            
             Face face;
             face.region = region;
+            face.right_eye = right_eye;
+            face.left_eye = left_eye;
             detectedFaces.push_back(face);
             if (!bDetectMultipleFaces) break;
         }
@@ -67,71 +76,43 @@ std::vector<Face> detectFace(cv::Mat img)
     return detectedFaces;
 }
 
-cv::Mat alignFace(cv::Mat faceImage)
+std::vector<Face> alignFace(cv::Mat img, std::vector<Face> faces)
 {
-    cv::Mat alignedImage = faceImage;
-    cv::CascadeClassifier eyeCascade;
-    eyeCascade.load("/usr/share/opencv4/haarcascades/haarcascade_eye.xml");
-    std::vector<cv::Rect> eyeRegions; 
-    eyeCascade.detectMultiScale(faceImage, eyeRegions,
-     1.1, 3, 0, cv::Size(80, 80));
-    for (auto region : eyeRegions){
-        cv::rectangle(faceImage, region, cv::Scalar(255, 0, 0), 2);
-        cv::Point point{region.x, region.y - 50};
-        cv::putText(faceImage, "emotion_text", point, cv::FONT_HERSHEY_PLAIN,
-             3, cv::Scalar(255, 0, 0), 2);
-    }
-
-    std::sort(eyeRegions.begin(), eyeRegions.end(),
-     [](cv::Rect A, cv::Rect B){return A.area() > B.area();});
-            cv::Rect leftEye, rightEye;
-
-    if (eyeRegions.size() >= 2){
-        cv::Rect eye1 = eyeRegions[0], eye2 = eyeRegions[1];
-        if(eye1.x < eye2.x){
-            leftEye = eye1;
-            rightEye = eye2;
+    std::vector<Face> alingnedFaces;
+    for(auto face : faces){
+        int direction;
+        cv::Point Point3rd;
+        if(face.left_eye.y > face.right_eye.y){
+            Point3rd = {face.right_eye.x, face.left_eye.y};
+            direction = -1;
         }
         else{
-            leftEye = eye2;
-            rightEye = eye1;
+            Point3rd = {face.left_eye.x, face.right_eye.y};
+            direction = 1;
+        }
+        double a = getEuclideanDistance(face.left_eye, Point3rd);
+        double b = getEuclideanDistance(face.right_eye, Point3rd);
+        double c = getEuclideanDistance(face.right_eye, face.left_eye);
+        if(b != 0 && c != 0){
+            double cos_a = (b * b + c * c - a * a) / (2 * b * c);
+            double angle = std::acos(cos_a);
+            angle = angle * 180 / acos(-1);
+            if(direction == -1){
+                angle = 90 - angle;
+            }
+            else{
+                angle = -angle;
+            }
+            face.align_angle = angle;
+            alingnedFaces.push_back(face);
         }
     }
-
-    int leftEyeX = leftEye.x + leftEye.width / 2;
-    int leftEyeY = leftEye.y + leftEye.height / 2;
-    int rightEyeX = rightEye.x + rightEye.width / 2;
-    int rightEyeY = rightEye.y + rightEye.height / 2;
-
-    int direction;
-    cv::Vec2i Point3rd;
-    if(leftEyeY > rightEyeY){
-        direction = -1;
-        Point3rd = {rightEyeX, leftEyeY};
-    }
-    else{
-        direction = 1;
-        Point3rd = {leftEyeX, rightEyeY};
-    }
-    double a = getEuclideanDistance(leftEye.x, leftEye.y, Point3rd[0], Point3rd[1]);
-    double b = getEuclideanDistance(rightEye.x, rightEye.y, Point3rd[0], Point3rd[1]);
-    double c = getEuclideanDistance(rightEye.x, rightEye.y, leftEye.x, leftEye.y);
-    if(b != 0 && c != 0){
-        double cos_a = (b * b + c * c - a * a) / (2 * b * c);
-        double angle = std::acos(cos_a);
-        angle = angle * 180 / acos(-1);
-        if(direction == -1){
-            angle = 90 - angle;
-        }
-        rotateImage(faceImage, alignedImage, angle, 1);
-    }
-    return alignedImage;
+    return alingnedFaces;
 }
 
-// cv::Mat normalizeFace(cv::Mat imgGray){
-// }
 std::vector<Face> analyzeFace(cv::Mat img, std::vector<Face> faces)
 {
+    cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
     std::vector<Face> analyzedFaces;
     for(auto face : faces){
         cv::Mat img_face = img(face.region);

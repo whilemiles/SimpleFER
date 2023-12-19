@@ -1,8 +1,14 @@
 #include "functions.h"
+#include <opencv2/core/types.hpp>
 
 double getEuclideanDistance(int x1 ,int y1 , int x2 , int y2 )
 {
 	return  pow(pow(x1 - x2, 2) + pow(y1 - y2, 2), 0.5);
+}
+
+double getEuclideanDistance(cv::Point p1, cv::Point p2)
+{
+	return  pow(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2), 0.5);
 }
 
 int rotateImage(const cv::Mat &src, cv::Mat &dst, const double angle, const int mode)
