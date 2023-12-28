@@ -1,7 +1,7 @@
 #include "Face.h"
 
-const std::string Face::getEmotionText(){
-    switch (emotion)
+const std::string Face::getExpressionText(){
+    switch (expression)
     {
     case(angry):
         return "angry";

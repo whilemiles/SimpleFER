@@ -3,7 +3,7 @@
 class Face
 {
 public:
-    enum Emotion
+    enum Expression
     {
         angry,
         disgust,
@@ -12,10 +12,10 @@ public:
         sad,
         surprise,
         neutral
-    } emotion;
+    } expression;
     cv::Rect region;    
     cv::Point left_eye;
     cv::Point right_eye;
     double align_angle;
-    const std::string getEmotionText();
+    const std::string getExpressionText();
 };

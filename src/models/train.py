@@ -7,7 +7,7 @@ import torchvision
 import torchvision.transforms as transforms
 import numpy as np
 from torch import optim
-import Emo_CNN
+import Expression_CNN
 
 PATH_TRAIN = './dataset/train/'
 PATH_TEST = './dataset/validate/'
@@ -20,7 +20,7 @@ def train(train_dataset, val_dataset, batch_size, epochs,
     """train"""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_loader = data.DataLoader(train_dataset, batch_size, shuffle=True)
-    model = Emo_CNN.EmoCNN()
+    model = Expression_CNN.ExpressionCNN()
     model = model.to(device)
     compute_loss = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=learning_rate, weight_decay=wt_decay)
@@ -82,7 +82,7 @@ def main():
     model = train(data_train, data_vaild, batch_size=BATCH_SIZE, epochs=EPOCHS,
                   learning_rate=LEARNING_RATE, wt_decay=0, print_cost=True)
     os.makedirs('./saved', exist_ok=True)
-    torch.save(model, './saved/EmoCNN.pt')  # 保存模型
+    torch.save(model, './saved/ExpressionCNN.pt')  # 保存模型
 
 if __name__ == '__main__':
     main()

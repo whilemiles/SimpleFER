@@ -16,36 +16,29 @@
 #include "FERPipeline.h"
 #include "functions.h"
 
-static int cnt = 0;
-
-std::vector<Face> FERPipeline(cv::Mat img)
+std::vector<Face> FERPipeline::run(cv::Mat img)
 {
-
+    inputImage = img;
     //detect
-    auto detectedFaces = detectFace(img);
-
+    detect();
     //align
-    auto alignedFaces = alignFace(img, detectedFaces);
-
+    align();
     // TODO::normalize
     
-    
     //analyze
-    auto analyzedFaces = analyzeFace(img, alignedFaces);
+    analyze();
     
-    return analyzedFaces;
+    return faces;
 }
 
 
-std::vector<Face> detectFace(cv::Mat img)
+void FERPipeline::detect()
 {
+    faces.clear();
     bool bDetectMultipleFaces = false;
-
-    std::vector<Face> detectedFaces;
-
     cv::Mat YuNetOutput;
-    cv::Ptr<cv::FaceDetectorYN> detector = cv::FaceDetectorYN::create("../saved/yunet.onnx", "", img.size());
-    detector->detect(img, YuNetOutput);
+    cv::Ptr<cv::FaceDetectorYN> detector = cv::FaceDetectorYN::create("../saved/yunet.onnx", "", inputImage.size());
+    detector->detect(inputImage, YuNetOutput);
 
     if (YuNetOutput.rows > 0) {
         for (int i = 0; i < YuNetOutput.rows; i++) {
@@ -55,10 +48,10 @@ std::vector<Face> detectFace(cv::Mat img)
             w = std::max<float>(0, YuNetOutput.at<float>(i, 2));
             h = std::max<float>(0, YuNetOutput.at<float>(i, 3));
 
-            if (x + w >= img.cols)
-            w = img.cols - x;
-            if (y + h >= img.rows)
-            h = img.rows - y;
+            if (x + w >= inputImage.cols) 
+            w = inputImage.cols - x;
+            if (y + h >= inputImage.rows)
+            h = inputImage.rows - y;
 
             cv::Rect region(x, y, w, h);
             
@@ -69,17 +62,16 @@ std::vector<Face> detectFace(cv::Mat img)
             face.region = region;
             face.right_eye = right_eye;
             face.left_eye = left_eye;
-            detectedFaces.push_back(face);
+            faces.push_back(face);
             if (!bDetectMultipleFaces) break;
         }
     }
-    return detectedFaces;
+    
 }
 
-std::vector<Face> alignFace(cv::Mat img, std::vector<Face> faces)
+void FERPipeline::align()
 {
-    std::vector<Face> alingnedFaces;
-    for(auto face : faces){
+    for(Face& face : faces){
         int direction;
         cv::Point Point3rd;
         if(face.left_eye.y > face.right_eye.y){
@@ -104,18 +96,15 @@ std::vector<Face> alignFace(cv::Mat img, std::vector<Face> faces)
                 angle = -angle;
             }
             face.align_angle = angle;
-            alingnedFaces.push_back(face);
         }
     }
-    return alingnedFaces;
 }
 
-std::vector<Face> analyzeFace(cv::Mat img, std::vector<Face> faces)
+void FERPipeline::analyze()
 {
-    cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
-    std::vector<Face> analyzedFaces;
-    for(auto face : faces){
-        cv::Mat img_face = img(face.region);
+    cv::cvtColor(inputImage, inputImage, cv::COLOR_BGR2GRAY);
+    for(Face& face : faces){
+        cv::Mat img_face = (inputImage)(face.region);
         
         cv::Mat img_face_f, img_face_r;
 
@@ -125,18 +114,14 @@ std::vector<Face> analyzeFace(cv::Mat img, std::vector<Face> faces)
         
         auto input = img_tensor.to(torch::kCUDA);
     
-        torch::jit::Module model = torch::jit::load("../saved/EmoCNN.jit");
+        torch::jit::Module model = torch::jit::load("../saved/ExpressionCNN.jit");
         model.to(torch::kCUDA);
         
         torch::NoGradGuard no_grad;
-        auto tmp = model.forward({input});
         torch::Tensor output = model.forward({input}).toTensor();
         int res = torch::argmax(output, 1).item().toInt();
         
-        face.emotion = (Face::Emotion)res;
-
-        analyzedFaces.push_back(face);
+        face.expression = (Face::Expression)res;
     }
-    return analyzedFaces;
 }
 

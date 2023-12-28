@@ -4,5 +4,4 @@ temp
 .vscode
 build
 dataset
-saved/EmoCNN.jit
-saved/EmoCNN.pt
+saved

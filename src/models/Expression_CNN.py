@@ -14,10 +14,10 @@ def gaussian_weights_init(m):
         m.weight.data.normal_(0.0, 0.04)
 
 
-class EmoCNN(nn.Module):
-    """EmoCNN"""
+class ExpressionCNN(nn.Module):
+    """ExpressionCNN"""
     def __init__(self):
-        super(EmoCNN, self).__init__()
+        super(ExpressionCNN, self).__init__()
 
         # layer1(conv + relu + pool)
         # input:(batch_size, 1, 48, 48), output(batch_size, 64, 24, 24)

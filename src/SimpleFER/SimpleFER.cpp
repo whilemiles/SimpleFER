@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -27,6 +28,7 @@ int main(int argc, char* argv[])
     cv::namedWindow("SimpleFER", 1); //创建一个窗口用于显示图像，1代表窗口适应图像的分辨率进行拉伸。
     cv::namedWindow("alingedFace", 1);
         
+    FERPipeline pipeline;
     while (true)
     {
         cap >> img; //以流形式捕获图像
@@ -37,16 +39,15 @@ int main(int argc, char* argv[])
 
         if(frameCount % interval == 0){
             frameCount = 0;
-            faces.clear();
-            faces = FERPipeline(img);
+            faces = pipeline.run(img);
         }
         for (Face& face : faces)
         {
             cv::rectangle(img, face.region, cv::Scalar(0, 255, 0), 2);
             
-            std::string emotion_text = face.getEmotionText();
+            std::string expression_text = face.getExpressionText();
             cv::Point text_location{face.region.x, face.region.y - 25};
-            cv::putText(img, emotion_text, text_location, cv::FONT_HERSHEY_PLAIN, 3, cv::Scalar(0, 255, 0), 2);
+            cv::putText(img, expression_text, text_location, cv::FONT_HERSHEY_PLAIN, 3, cv::Scalar(0, 255, 0), 2);
             cv::circle(img, face.left_eye, 3, cv::Scalar_(0, 0, 255), 2);
             cv::circle(img, face.right_eye, 3, cv::Scalar_(255, 0, 0), 2);
         }

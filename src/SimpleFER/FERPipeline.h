@@ -1,10 +1,18 @@
 #include <iostream>
+#include <opencv2/core/cvstd_wrapper.hpp>
+#include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
 #include "Face.h"
 
-std::vector<Face> FERPipeline(cv::Mat img);
-
-std::vector<Face> detectFace(cv::Mat img);
-std::vector<Face> alignFace(cv::Mat img, std::vector<Face> faces);
-std::vector<Face> normalizeFace(cv::Mat img, std::vector<Face> faces);
-std::vector<Face> analyzeFace(cv::Mat img, std::vector<Face> faces);
+class FERPipeline
+{
+    cv::Mat inputImage;
+    std::vector<Face> faces;
+public:
+    std::vector<Face> run(cv::Mat img);
+private:
+    void detect();
+    void align();
+    void normalize();
+    void analyze();
+};
