@@ -22,7 +22,7 @@ std::vector<Face> FERPipeline::run(cv::Mat img)
     //detect
     detect();
     //align
-    align();
+    //align();
     // TODO::normalize
     
     //analyze
@@ -120,7 +120,6 @@ void FERPipeline::analyze()
         torch::NoGradGuard no_grad;
         torch::Tensor output = model.forward({input}).toTensor();
         int res = torch::argmax(output, 1).item().toInt();
-        
         face.expression = (Face::Expression)res;
     }
 }
