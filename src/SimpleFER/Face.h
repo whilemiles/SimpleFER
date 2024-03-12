@@ -9,9 +9,10 @@ public:
         disgust,
         fear,
         happy,
+        neutral,
         sad,
         surprise,
-        neutral
+        null
     } expression;
     cv::Rect region;    
     cv::Point left_eye;

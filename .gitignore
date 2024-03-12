@@ -5,3 +5,6 @@ temp
 build
 dataset
 saved
+src/models/__pycache__/
+logs
+runs

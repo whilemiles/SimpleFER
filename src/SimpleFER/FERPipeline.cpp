@@ -5,6 +5,7 @@
 #include <cmath>
 #include <opencv2/core/cvstd_wrapper.hpp>
 #include <opencv2/core/mat.hpp>
+#include <opencv2/core/persistence.hpp>
 #include <opencv2/core/types.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -102,6 +103,9 @@ void FERPipeline::align()
 
 void FERPipeline::analyze()
 {
+    if(faces.empty()){
+        return;
+    }
     cv::cvtColor(inputImage, inputImage, cv::COLOR_BGR2GRAY);
     for(Face& face : faces){
         cv::Mat img_face = (inputImage)(face.region);
@@ -111,10 +115,13 @@ void FERPipeline::analyze()
         img_face.convertTo(img_face_f, CV_32F, 1.0 / 255);
         cv::resize(img_face_f, img_face_r, {48,48});
         at::Tensor img_tensor = torch::from_blob(img_face_r.data, {1, 1, 48, 48}, torch::kFloat32);
+        float mean = 0; 
+        float std = 255;  
+        torch::Tensor normalizedTensor = (img_tensor - mean) / std;
+        auto input = normalizedTensor.to(torch::kCUDA);
         
-        auto input = img_tensor.to(torch::kCUDA);
-    
-        torch::jit::Module model = torch::jit::load("../saved/ExpressionCNN.jit");
+        torch::jit::Module model = torch::jit::load("../saved/ResNet18_best.jit");
+        //torch::jit::Module model = torch::jit::load("../saved/acc73.jit");
         model.to(torch::kCUDA);
         
         torch::NoGradGuard no_grad;
