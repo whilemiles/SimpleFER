@@ -46,7 +46,7 @@ void post_handler(const std::shared_ptr<restbed::Session>& session)
                 face.expression = (Face::Expression)7; //null
             }
             std::string response_body = serializeFace(face);
-            //std::cout << postCount++ << ": "<< response_body << std::endl;
+            std::cout << postCount++ << ": "<< response_body << std::endl;
             restbed::Response response = restbed::Response();
             response.set_status_code(200);
             response.set_body(response_body);

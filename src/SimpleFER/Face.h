@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <opencv2/core/types.hpp>
+#include <opencv2/core/mat.hpp>
 
 class Face
 {
@@ -15,8 +17,6 @@ public:
         null
     } expression;
     cv::Rect region;    
-    cv::Point left_eye;
-    cv::Point right_eye;
-    double align_angle;
+    cv::Mat YuNetFirstRow;
     const std::string getExpressionText();
 };
