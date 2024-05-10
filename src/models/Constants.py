@@ -1,10 +1,11 @@
 EPOCHS = 300
-MODEL_NAME = 'ResNet18'
+MODEL_NAME = 'ResNet18-lr'
 SAVED_MODEL_DIR = './saved/' + MODEL_NAME
 TENSORBOARD_DIR = './runs/' + MODEL_NAME
 PATH_TRAIN = './dataset/train/'
+PATH_EVAL = './dataset/eval/'
 PATH_TEST = './dataset/test/'
 BATCH_SIZE = 64
-LEARNING_RATE = 0.1
+LEARNING_RATE = 0.01
 MOMENTUM = 0.9
 WEIGHT_DECAY = 1e-4

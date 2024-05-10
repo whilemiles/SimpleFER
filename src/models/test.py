@@ -9,7 +9,7 @@ from Utils import *
 from Constants import *
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, precision_score, f1_score, recall_score
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLASS_NAMES = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
@@ -69,6 +69,9 @@ test_loader = DataLoader(data_test, batch_size=BATCH_SIZE, shuffle=True)
 
 accuracy, all_preds, all_labels = test(model, test_loader, criterion)
 
+print("Precision: %2.6f" % precision_score(all_labels, all_preds, average='micro'))
+print("Recall: %2.6f" % recall_score(all_labels, all_preds, average='micro'))
+
 conf_matrix = confusion_matrix(all_labels, all_preds)
 conf_matrix_norm = conf_matrix.astype('float') / conf_matrix.sum(axis=1)[:, np.newaxis]
 
@@ -84,6 +87,7 @@ plt.yticks(np.arange(len(CLASS_NAMES)), CLASS_NAMES)
 for i in range(conf_matrix_norm.shape[0]):
     for j in range(conf_matrix_norm.shape[1]):
         plt.text(j, i, "{:.2f}".format(conf_matrix_norm[i, j]), horizontalalignment="center", color="black")
+
 
 plt.tight_layout()
 

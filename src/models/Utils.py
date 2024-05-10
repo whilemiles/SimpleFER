@@ -6,12 +6,6 @@ import torch.nn.functional as F
 
 from ResNet18 import ResNet18
 
-
-def cross_entropy(outputs, smooth_labels):
-    loss = torch.nn.KLDivLoss(reduction='batchmean')
-    return loss(F.log_softmax(outputs, dim=1), smooth_labels)
-
-
 def smooth_one_hot(true_labels: torch.Tensor, classes: int, smoothing=0.0):
     device = true_labels.device
     true_labels = torch.nn.functional.one_hot(

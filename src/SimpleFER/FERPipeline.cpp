@@ -11,12 +11,15 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/videoio.hpp>
 #include <ostream>
 #include <string>
 #include "torch/script.h"
 #include "torch/torch.h"
 #include "FERPipeline.h"
 #include "functions.h"
+#include <cstdlib>
 
 std::vector<Face> FERPipeline::run(cv::Mat img)
 {
@@ -24,6 +27,7 @@ std::vector<Face> FERPipeline::run(cv::Mat img)
     detect();
     align();
     analyze();
+    save();
     return faces;
 }
 
@@ -51,7 +55,7 @@ void FERPipeline::detect()
         
         Face face;
         face.region = region;
-        face.YuNetFirstRow = YuNetOutput.row(0);
+        face.faceBox = YuNetOutput.row(0);
         faces.push_back(face);
     }
     
@@ -63,7 +67,7 @@ void FERPipeline::align()
         return;
     }
     
-    faceRecognizer->alignCrop(inputImage, faces[0].YuNetFirstRow, alignedImage);
+    faceRecognizer->alignCrop(inputImage, faces[0].faceBox, alignedImage);
     
     // std::time_t currentTime = std::time(nullptr);
     // std::tm* localTime = std::localtime(&currentTime);
@@ -99,7 +103,7 @@ void FERPipeline::analyze()
     torch::Tensor normalizedTensor = (img_tensor - mean) / std;
     auto input = normalizedTensor.to(torch::kCUDA);
     
-    torch::jit::Module model = torch::jit::load("../saved/ResNet18_best.jit");
+    torch::jit::Module model = torch::jit::load("../saved/ResNet18-lr_best.jit");
     model.to(torch::kCUDA);
     
     torch::NoGradGuard no_grad;
@@ -111,3 +115,66 @@ void FERPipeline::analyze()
     //std::cout << face.expression << std::endl;
 }
 
+void FERPipeline::offline_process(std::string filename)
+{
+    using namespace cv;
+    VideoCapture inputVideo(filename);
+
+    if (!inputVideo.isOpened()) {
+        std::cerr << "Error: Unable to open input video file\n";
+        return;
+    }
+
+    double fps = inputVideo.get(CAP_PROP_FPS);
+    Size frameSize(static_cast<int>(inputVideo.get(CAP_PROP_FRAME_WIDTH)),
+                   static_cast<int>(inputVideo.get(CAP_PROP_FRAME_HEIGHT)));
+    int totalFrames = static_cast<int>(inputVideo.get(CAP_PROP_FRAME_COUNT));
+    std::cout<<filename <<std::endl;
+    VideoWriter outputVideo(filename + "-fer.mp4", VideoWriter::fourcc('m', 'p', '4', 'v'), fps, frameSize);
+
+    if (!outputVideo.isOpened()) {
+        std::cerr << "Error: Unable to create output video file\n";
+        return;
+    }
+
+    Mat frame;
+    int frameCount = 0;
+    FERPipeline pipeline;
+    std::vector<Face> faces;
+
+    while (inputVideo.read(frame)) {
+        if (frameCount % 2 == 0) {
+            faces = pipeline.run(frame);
+        }
+
+        for (Face& face : faces)
+        {
+            cv::rectangle(frame, face.region, cv::Scalar(0, 255, 0), 2);
+            std::string expression_text = face.getExpressionText();
+            cv::Point text_location{face.region.x, face.region.y - 25};
+            cv::putText(frame, expression_text, text_location, cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(0, 0, 255), 2);
+        }
+
+        outputVideo.write(frame);
+        frameCount++;
+    }
+    visualize();
+    std::cout << "Offline Process Finished" << std::endl;
+    inputVideo.release();
+    outputVideo.release();
+}
+
+void FERPipeline::save()
+{
+    if(faces.empty()){
+        return;
+    }
+    std::string command = "python ../scripts/sqlite.py \"" + userName +"\" \"" + faces[0].getExpressionText() + "\"";
+    system(command.c_str());
+}
+
+void FERPipeline::visualize()
+{
+    std::string command = "python ../scripts/visualize.py \"" + userName +"\"";
+    system(command.c_str());
+}

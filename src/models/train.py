@@ -11,7 +11,7 @@ from Utils import *
 from Constants import *
 
 best_acc = 0.0
-def test(model, epoch, dataloader, criterion, writer=None, NCrop=True):
+def eval(model, epoch, dataloader, criterion, writer=None, NCrop=True):
     model.eval()
     running_loss = 0.0
     correct = 0
@@ -37,14 +37,14 @@ def test(model, epoch, dataloader, criterion, writer=None, NCrop=True):
 
     accuracy = correct / total
     avg_loss = running_loss / len(dataloader)
-    print(f"Test Loss: {avg_loss:.4f}, Test Accuracy: {accuracy:.4f}")
+    print(f"eval Loss: {avg_loss:.4f}, eval Accuracy: {accuracy:.4f}")
 
     if writer:
-        writer.add_scalar('Loss/test', avg_loss, epoch)
-        writer.add_scalar('Accuracy/test', accuracy, epoch)
+        writer.add_scalar('Loss/eval', avg_loss, epoch)
+        writer.add_scalar('Accuracy/eval', accuracy, epoch)
     return accuracy
 
-def train(model, train_loader, test_loader, optimizer, criterion, scheduler, num_epochs=5, start_epoch=0, writer=None, NCrop=True, scaler = GradScaler()):
+def train(model, train_loader, eval_loader, optimizer, criterion, scheduler, num_epochs=5, start_epoch=0, writer=None, NCrop=True, scaler = GradScaler()):
     global best_acc
     for epoch in range(start_epoch, num_epochs):
         print("")
@@ -81,7 +81,7 @@ def train(model, train_loader, test_loader, optimizer, criterion, scheduler, num
 
         scheduler.step(avg_loss)
 
-        acc = test(model, epoch, test_loader, criterion, writer)
+        acc = eval(model, epoch, eval_loader, criterion, writer)
         if(acc > best_acc):
             best_acc = acc
             torch.save({
@@ -123,7 +123,7 @@ transforms_train = transforms.Compose([
         [transforms.RandomErasing()(t) for t in tensors])),
 ])
 
-transforms_test = transforms.Compose([
+transforms_eval = transforms.Compose([
     transforms.Grayscale(),
     transforms.TenCrop(40),
     transforms.Lambda(lambda crops: torch.stack(
@@ -135,9 +135,9 @@ transforms_test = transforms.Compose([
 random_seed(5050)
 
 data_train = torchvision.datasets.ImageFolder(root=PATH_TRAIN, transform=transforms_train)
-data_test = torchvision.datasets.ImageFolder(root=PATH_TEST, transform=transforms_test)
+data_eval = torchvision.datasets.ImageFolder(root=PATH_EVAL, transform=transforms_eval)
 train_loader = DataLoader(data_train, batch_size=BATCH_SIZE, shuffle=True)
-test_loader = DataLoader(data_test, batch_size=BATCH_SIZE, shuffle=True)
+eval_loader = DataLoader(data_eval, batch_size=BATCH_SIZE, shuffle=True)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = ResNet18().to(device)
@@ -160,5 +160,5 @@ except FileNotFoundError:
     print("No checkpoint found, starting training from scratch.")
 
 writer = SummaryWriter(TENSORBOARD_DIR)
-train(model, train_loader, test_loader, optimizer, criterion, scheduler, EPOCHS, start_epoch=start_epoch, writer=writer)
+train(model, train_loader, eval_loader, optimizer, criterion, scheduler, EPOCHS, start_epoch=start_epoch, writer=writer)
 writer.close()

@@ -1,3 +1,4 @@
+#include "FERPipeline.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -11,11 +12,11 @@
 #include <memory>
 #include <iterator>
 #include <nlohmann/json.hpp>
-#include "FERPipeline.h"
 
 using namespace nlohmann;
 std::shared_ptr<FERPipeline> pipeline;
 int postCount = 0;
+
 std::string serializeFace(const Face& face) {
     json face_json;
     face_json["expression"] = face.expression;
@@ -30,34 +31,70 @@ void post_handler(const std::shared_ptr<restbed::Session>& session)
 {
     const auto request = session->get_request( );
     size_t content_length = request->get_header("Content-Length", 0);
-    session->fetch
-    (   
-        content_length, [content_length](const std::shared_ptr<restbed::Session> session, const restbed::Bytes& body)
-        {
-            cv::Mat img = cv::imdecode(body, cv::IMREAD_COLOR);
-            std::vector<Face> faces;
-            Face face;
-            faces = pipeline->run(img);
-            if(!faces.empty())
+    auto content_type = request->get_header("Content-Type", "");
+    
+    if(content_type.compare("image/jpeg") == 0){
+        session->fetch
+        (   
+            content_length, [content_length](const std::shared_ptr<restbed::Session> session, const restbed::Bytes& body)
             {
-                face = faces[0];
+                cv::Mat img = cv::imdecode(body, cv::IMREAD_COLOR);
+                std::vector<Face> faces;
+                Face face;
+                faces = pipeline->run(img);
+                if(!faces.empty())
+                {
+                    face = faces[0];
+                }
+                else{
+                    face.expression = (Face::Expression)7; //null
+                }
+                std::string response_body = serializeFace(face);
+                std::cout << postCount++ << ": "<< response_body << std::endl;
+                restbed::Response response = restbed::Response();
+                response.set_status_code(200);
+                response.set_body(response_body);
+                response.set_header("Content-Type", "application/json");
+                session->close(response);
+                return;
             }
-            else{
-                face.expression = (Face::Expression)7; //null
+        );
+    }
+    else if(content_type.compare("video/mp4") == 0){
+        session->fetch
+        (   
+            content_length, [content_length](const std::shared_ptr<restbed::Session> session, const restbed::Bytes& body)
+            {
+                std::time_t currentTime = std::time(nullptr);
+                std::tm* localTime = std::localtime(&currentTime);
+                std::stringstream filename_stream;
+                filename_stream << std::put_time(localTime, "%Y-%m-%d_%H-%M-%S") << ".mp4";
+                std::string filename = filename_stream.str();
+                std::ofstream file(filename, std::ios::out | std::ios::binary);
+                if (file.is_open()) {
+                    file.write(reinterpret_cast<const char*>(body.data()), body.size());
+                    file.close();
+                    std::cout << "Video data saved to " << filename << " successfully." << std::endl;
+                }
+                else {
+                    std::cerr << "Error opening file: " << filename << std::endl;
+                }
+                pipeline->offline_process(filename);
+                restbed::Response response = restbed::Response();
+                response.set_status_code(200);
+                session->close(response);
+                return;
             }
-            std::string response_body = serializeFace(face);
-            std::cout << postCount++ << ": "<< response_body << std::endl;
-            restbed::Response response = restbed::Response();
-            response.set_status_code(200);
-            response.set_body(response_body);
-            response.set_header("Content-Type", "application/json");
-            session->close(response);
-            return;
-        }
-    );
+        );
+    }
 }
 
-int main(int argc, char* argv[])
+void test()
+{
+    pipeline = std::make_shared<FERPipeline>();
+    pipeline->save();
+}
+void execute()
 {
     pipeline = std::make_shared<FERPipeline>();
 
@@ -71,6 +108,11 @@ int main(int argc, char* argv[])
     restbed::Service service;
     service.publish(resource);
     service.start(settings);
+}
 
-    return EXIT_SUCCESS;
+int main(int argc, char* argv[])
+{
+    execute();
+    //test();
+    return 0;
 }

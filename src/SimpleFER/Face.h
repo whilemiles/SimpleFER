@@ -17,6 +17,6 @@ public:
         null
     } expression;
     cv::Rect region;    
-    cv::Mat YuNetFirstRow;
+    cv::Mat faceBox;
     const std::string getExpressionText();
 };

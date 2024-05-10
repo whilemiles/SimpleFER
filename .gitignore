@@ -6,5 +6,9 @@ build
 dataset
 saved
 src/models/__pycache__/
+db
+misc
 logs
 runs
+visual_pics
+tensorboard
