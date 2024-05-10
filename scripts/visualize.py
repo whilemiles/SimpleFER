@@ -8,29 +8,32 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.interpolate import make_interp_spline
 
-os.makedirs('build/db',exist_ok=True)
-os.makedirs('build/visual_pics',exist_ok=True)
+# os.makedirs('build/db',exist_ok=True)
+# os.makedirs('build/visual_pics',exist_ok=True)
+
+os.makedirs('db',exist_ok=True)
+os.makedirs('visual_pics',exist_ok=True)
 
 if len(sys.argv) > 1:
     user = sys.argv[1]
-    conn = sqlite3.connect('build/db/'+ user +'.db')
+    conn = sqlite3.connect('db/'+ user +'.db')
     cur = conn.cursor()
     
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='emotions'")
-    table_exists = cur.fetchone()
+    # cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='emotions'")
+    # table_exists = cur.fetchone()
 
-    if not table_exists:
-        cur.execute('''CREATE TABLE emotions (
-                        id INTEGER PRIMARY KEY,
-                        time TIMESTAMP,
-                        emotion TEXT
-                        )''')
+    # if not table_exists:
+    #     cur.execute('''CREATE TABLE emotions (
+    #                     id INTEGER PRIMARY KEY,
+    #                     time TIMESTAMP,
+    #                     emotion TEXT
+    #                     )''')
         
     cur.execute("SELECT * FROM emotions")
     rows = cur.fetchall()
-    if rows.count == 0:
-        print("rows:0")
-        exit
+    if len(rows) == 0:
+        print("1")
+        exit(-1)
     
     mark_data = {
         "Angry" : [],
@@ -101,7 +104,7 @@ if len(sys.argv) > 1:
 
     # plt.show()
 
-    plt.savefig('build/visual_pics/curve' +  datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
+    plt.savefig('visual_pics/curve' +  datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
     plt.clf()
 
     emotion_lengths = {emotion: len(indices) for emotion, indices in mark_data.items()}
@@ -113,7 +116,7 @@ if len(sys.argv) > 1:
     plt.axis('equal') 
     plt.legend(bbox_to_anchor=(1, 1), loc="upper left", title="Emotions", fontsize='medium')
 
-    plt.savefig('build/visual_pics/pie' +  datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
+    plt.savefig('visual_pics/pie' +  datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
     # plt.show()
 
 

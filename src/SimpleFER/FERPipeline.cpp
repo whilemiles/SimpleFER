@@ -3,6 +3,7 @@
 #include <c10/core/DeviceType.h>
 #include <cstdlib>
 #include <cmath>
+#include <opencv2/core/cvdef.h>
 #include <opencv2/core/cvstd_wrapper.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/persistence.hpp>
@@ -158,7 +159,9 @@ void FERPipeline::offline_process(std::string filename)
         outputVideo.write(frame);
         frameCount++;
     }
+
     visualize();
+    
     std::cout << "Offline Process Finished" << std::endl;
     inputVideo.release();
     outputVideo.release();
@@ -169,12 +172,13 @@ void FERPipeline::save()
     if(faces.empty()){
         return;
     }
-    std::string command = "python ../scripts/sqlite.py \"" + userName +"\" \"" + faces[0].getExpressionText() + "\"";
+    std::string command = "python ../scripts/sqlite.py " + userName + " " + faces[0].getExpressionText();
     system(command.c_str());
 }
 
 void FERPipeline::visualize()
 {
-    std::string command = "python ../scripts/visualize.py \"" + userName +"\"";
+    std::string command = "python ../scripts/visualize.py " + userName;
+    std::cout<< command << std::endl;
     system(command.c_str());
 }

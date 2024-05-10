@@ -91,8 +91,8 @@ void post_handler(const std::shared_ptr<restbed::Session>& session)
 
 void test()
 {
-    pipeline = std::make_shared<FERPipeline>();
-    pipeline->save();
+    std::string command = "python ../scripts/visualize.py user";
+    system(command.c_str());
 }
 void execute()
 {
