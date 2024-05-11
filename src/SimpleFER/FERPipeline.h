@@ -23,7 +23,7 @@ public:
     void offline_process(std::string filename);
     void save();
     void visualize();
-private:
+    
     void detect();
     void align();
     void normalize();
