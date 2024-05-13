@@ -37,7 +37,7 @@ find_package(Torch REQUIRED PATHS "~/libtorch")
 find_package(nlohmann_json 3.6.0 REQUIRED)
 
 # Other settings
-add_executable(SimpleFER src/SimpleFER/main.cpp src/SimpleFER/FERPipeline.cpp src/SimpleFER/Face.cpp src/SimpleFER/functions.cpp)
+add_executable(SimpleFER src/SimpleFER/main.cpp src/SimpleFER/FERPipeline.cpp src/SimpleFER/Face.cpp src/SimpleFER/functions.cpp src/SimpleFER/User.cpp)
 # add_executable(SimpleFER src/SimpleFER/SimpleFER.cpp src/SimpleFER/FERPipeline.cpp src/SimpleFER/Face.cpp src/SimpleFER/functions.cpp)
 
 target_link_libraries(SimpleFER PRIVATE ${TORCH_LIBRARIES} ${OpenCV_LIBRARIES} pthread)

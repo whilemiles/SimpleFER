@@ -19,4 +19,6 @@ public:
     cv::Rect region;    
     cv::Mat faceBox;
     const std::string getExpressionText();
+
+    static std::string serializeFace(const Face& face);
 };
