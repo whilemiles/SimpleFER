@@ -99,12 +99,14 @@ if len(sys.argv) > 1:
     for label, (x_new, y_smooth) in smoothed_data.items():
         plt.plot(x_new, y_smooth, label=label)
 
+    os.makedirs('visual_pics/' + user,exist_ok=True)
+
     plt.legend()
     plt.grid(True)
-
+    plt.title('@' + user)
     # plt.show()
-
-    plt.savefig('visual_pics/curve' +  datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
+    plt.tight_layout()
+    plt.savefig('visual_pics/' + user + '/curve' +  datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
     plt.clf()
 
     emotion_lengths = {emotion: len(indices) for emotion, indices in mark_data.items()}
@@ -113,10 +115,12 @@ if len(sys.argv) > 1:
     sizes = list(emotion_lengths.values())
 
     plt.pie(sizes, labels=labels, explode=(0,0,0,0,0,0), autopct='%1.1f%%', startangle=140,labeldistance = 1000)
-    plt.axis('equal') 
+    # plt.axis('equal') 
     plt.legend(bbox_to_anchor=(1, 1), loc="upper left", title="Emotions", fontsize='medium')
-
-    plt.savefig('visual_pics/pie' +  datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
+    plt.title('@' + user)
+    # plt.tight_layout()
+    
+    plt.savefig('visual_pics/'+ user + '/pie' +  datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
     # plt.show()
 
 

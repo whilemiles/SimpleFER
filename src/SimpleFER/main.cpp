@@ -1,5 +1,6 @@
 #include "FERPipeline.h"
 #include "User.h"
+#include "corvusoft/restbed/response.hpp"
 #include "corvusoft/restbed/status_code.hpp"
 #include <algorithm>
 #include <cstdio>
@@ -14,16 +15,25 @@
 #include <memory>
 #include <iterator>
 #include <string>
+#include <filesystem>
 
 std::shared_ptr<FERPipeline> pipeline;
 int postCount = 0;
+namespace fs = std::filesystem;
 
 void post_handler(const std::shared_ptr<restbed::Session>& session) 
 {
     const auto request = session->get_request( );
     size_t content_length = request->get_header("Content-Length", 0);
     auto content_type = request->get_header("Content-Type", "");
-    
+    auto query_parameters = request->get_query_parameters();
+    std::string user_name = "";
+    for (const auto& parameter : query_parameters) {
+        if (parameter.first == "user_name") {
+            user_name = parameter.second;
+            break;
+        }
+    }
     if(content_type.compare("image/jpeg") == 0){
         session->fetch
         (   
@@ -54,14 +64,15 @@ void post_handler(const std::shared_ptr<restbed::Session>& session)
     else if(content_type.compare("video/mp4") == 0){
         session->fetch
         (   
-            content_length, [content_length](const std::shared_ptr<restbed::Session> session, const restbed::Bytes& body)
+            content_length, [content_length, user_name](const std::shared_ptr<restbed::Session> session, const restbed::Bytes& body)
             {
                 std::time_t currentTime = std::time(nullptr);
                 std::tm* localTime = std::localtime(&currentTime);
                 std::stringstream filename_stream;
-                filename_stream << std::put_time(localTime, "%Y-%m-%d_%H-%M-%S") << ".mp4";
+                filename_stream << std::put_time(localTime, "%Y-%m-%d_%H-%M-%S") << "-" << user_name << ".mp4";
                 std::string filename = filename_stream.str();
                 std::ofstream file(filename, std::ios::out | std::ios::binary);
+                
                 if (file.is_open()) {
                     file.write(reinterpret_cast<const char*>(body.data()), body.size());
                     file.close();
@@ -70,7 +81,9 @@ void post_handler(const std::shared_ptr<restbed::Session>& session)
                 else {
                     std::cerr << "Error opening file: " << filename << std::endl;
                 }
+                pipeline->setCurUser(user_name);
                 pipeline->offline_process(filename);
+                
                 restbed::Response response = restbed::Response();
                 response.set_status_code(200);
                 session->close(response);
@@ -92,7 +105,7 @@ void register_handler(const std::shared_ptr<restbed::Session> session)
             User user = User::deserialize(jsonString);
             //std::cout << user.Name << " " << user.Password << std::endl;
             int status = User::registerUser(user);
-            std::cout << status << std::endl;
+            //std::cout << status << std::endl;
 
             if(status == 0){
                 std::string msg = "Register success";
@@ -112,6 +125,7 @@ void register_handler(const std::shared_ptr<restbed::Session> session)
 
 void login_handler(const std::shared_ptr<restbed::Session> session)
 {   
+    std::cout << "login handler" << std::endl;
     const auto request = session->get_request();
     size_t content_length = request->get_header("Content-Length", 0);
     auto content_type = request->get_header("Content-Type", "");
@@ -122,7 +136,7 @@ void login_handler(const std::shared_ptr<restbed::Session> session)
             User user = User::deserialize(jsonString);
             //std::cout << user.Name << " " << user.Password << std::endl;
             int status = User::loginUser(user);
-            std::cout << status << std::endl;
+            //std::cout << status << std::endl;
 
             if(status == 0){
                 std::string msg = "Login success";
@@ -138,6 +152,82 @@ void login_handler(const std::shared_ptr<restbed::Session> session)
             }
         });
     }
+}
+
+void get_image_urls(const std::shared_ptr<restbed::Session>& session) {
+    const auto request = session->get_request( );
+
+    auto query_parameters = request->get_query_parameters();
+    std::string user_name = "";
+    for (const auto& parameter : query_parameters) {
+        if (parameter.first == "user_name") {
+            user_name = parameter.second;
+            break;
+        }
+    }
+
+    std::stringstream response_body;
+
+    std::string url_base = "http://172.21.117.218:5050/image?path=visual_pics/" + user_name + "/";
+    std::string folderPath = "./visual_pics/" + user_name;
+    if (fs::exists(folderPath) && fs::is_directory(folderPath)) {
+        for (const auto& entry : fs::directory_iterator(folderPath)) {
+            if (entry.is_regular_file()) {
+                response_body << url_base << entry.path().filename().string().c_str() << " "; 
+            }
+        }
+    } else {
+        std::cout << "文件夹不存在或无权访问" << std::endl;
+    }
+    //std::cout << response_body.str() << std::endl;
+    const auto response = std::make_shared<restbed::Response>( );
+
+    response->set_status_code(200);
+    response->set_header("Content-Type", "text/plain");
+    response->set_body(response_body.str());
+    session->close(*response);
+}
+
+void get_image(const std::shared_ptr<restbed::Session>& session) {
+    std::cout << "get image" << std::endl;
+
+    const auto request = session->get_request( );
+
+    auto query_parameters = request->get_query_parameters();
+    std::string path = "";
+    for (const auto& parameter : query_parameters) {
+        if (parameter.first == "path") {
+            path = parameter.second;
+            break;
+        }
+    }
+
+    std::cout << "path:"<< path << std::endl;
+    // session->fetch(path, [](const std::shared_ptr<restbed::Session> session, const restbed::Bytes &body)
+    // {
+    //     session->close(restbed::OK, body);
+    // });
+
+
+
+    const auto response = std::make_shared<restbed::Response>( );
+    response->set_header("Content-Type", "image/jpeg");
+    std::ifstream image_file(path, std::ios::binary | std::ios::ate);
+    if (!image_file.is_open()) {
+        response->set_status_code(404);
+        session->close(*response);
+        return;
+    }
+
+    const auto image_size = image_file.tellg();
+    image_file.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> image_data(image_size);
+    image_file.read(reinterpret_cast<char*>(image_data.data()), image_size);
+
+    response->set_status_code(200);
+    response->set_body(image_data);
+    session->close(*response);
 }
 
 void test()
@@ -160,13 +250,25 @@ void execute()
     resLogin->set_path("/login");
     resLogin->set_method_handler("POST", login_handler);
 
+    auto resImage = std::make_shared<restbed::Resource>();
+    resImage->set_path("/image");
+    resImage->set_method_handler("GET", get_image);
+    
+
+    auto resImageUrls = std::make_shared<restbed::Resource>();
+    resImageUrls->set_path("/image-urls");
+    resImageUrls->set_method_handler("GET", get_image_urls);
+
     auto settings = std::make_shared<restbed::Settings>();
+    //settings->set_root("./");
     settings->set_port(5050);
 
     restbed::Service service;
     service.publish(resUpload);
     service.publish(resRegister);
     service.publish(resLogin);
+    service.publish(resImage);
+    service.publish(resImageUrls);
 
     service.start(settings);
 }

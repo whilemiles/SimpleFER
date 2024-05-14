@@ -285,7 +285,6 @@ void FERPipeline::offline_process(std::string filename)
 {
     using namespace cv;
     VideoCapture inputVideo(filename);
-
     if (!inputVideo.isOpened()) {
         std::cerr << "Error: Unable to open input video file\n";
         return;
@@ -305,12 +304,11 @@ void FERPipeline::offline_process(std::string filename)
 
     Mat frame;
     int frameCount = 0;
-    FERPipeline pipeline;
     std::vector<Face> faces;
 
     while (inputVideo.read(frame)) {
         if (frameCount % 2 == 0) {
-            faces = pipeline.run(frame);
+            faces = this->run(frame);
         }
 
         for (Face& face : faces)
@@ -337,13 +335,18 @@ void FERPipeline::save()
     if(faces.empty()){
         return;
     }
-    std::string command = "python ../scripts/sqlite.py " + userName + " " + faces[0].getExpressionText();
+    std::string command = "python ../scripts/sqlite.py " + curUser + " " + faces[0].getExpressionText();
+    //std::cout<< command << std::endl;
     system(command.c_str());
 }
 
 void FERPipeline::visualize()
 {
-    std::string command = "python ../scripts/visualize.py " + userName;
-    std::cout<< command << std::endl;
+    std::string command = "python ../scripts/visualize.py " + curUser;
+    //std::cout<< command << std::endl;
     system(command.c_str());
+}
+
+void FERPipeline::setCurUser(std::string name){
+    curUser = name;
 }

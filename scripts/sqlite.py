@@ -31,9 +31,10 @@ if len(sys.argv) > 2:
                         emotion TEXT
                         )''')
     insert_emotion(emotion)
+    cur.close()
+    conn.close()
 else:
     print("Error: arg incorrcet")
 # get_emotions()
 
-cur.close()
-conn.close()
+
