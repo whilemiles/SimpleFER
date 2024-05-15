@@ -84,9 +84,16 @@ void post_handler(const std::shared_ptr<restbed::Session>& session)
                 pipeline->setCurUser(user_name);
                 pipeline->offline_process(filename);
                 
-                restbed::Response response = restbed::Response();
-                response.set_status_code(200);
-                session->close(response);
+                std::ifstream new_video_file(filename + "-fer.mp4", std::ios::binary | std::ios::ate);
+                std::streamsize size = new_video_file.tellg();
+                new_video_file.seekg(0, std::ios::beg);
+
+                std::vector<char> buffer(size);
+                if (new_video_file.read(buffer.data(), size)) {
+                    session->close(restbed::OK, std::string(buffer.data(), buffer.size()), { { "Content-Length", std::to_string(size) }, { "Content-Type", "video/mp4" } });
+                } else {
+                    session->close(restbed::INTERNAL_SERVER_ERROR);
+                }
                 return;
             }
         );

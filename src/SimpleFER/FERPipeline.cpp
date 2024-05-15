@@ -133,8 +133,8 @@ void FERPipeline::align()
 //         -M.at<float>(1), M.at<float>(0), M.at<float>(3));
 
 //     cv::warpAffine(faceImage, alignedImage, matrix, cv::Size(112, 112));
-//     cv::imwrite("aaaa.jpg", faceImage);
-//     cv::imwrite("bbbb.jpg", alignedImage);
+//     //cv::imwrite("aaaa.jpg", faceImage);
+//     //cv::imwrite("bbbb.jpg", alignedImage);
 // }
 
 // void FERPipeline::align() //6 degree test
